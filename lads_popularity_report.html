@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>恋与深空 × 支付宝 春季联动活动兑换数据分析</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root {
+    --bg: #d9ead3;
+    --card: #ffffff;
+    --card2: #f2f9f0;
+    --border: #c8dcc8;
+    --text: #2d3748;
+    --muted: #7e8c7a;
+    --pink: #e75480;
+    --pink-bg: #fce4ec;
+    --red: #d64545;
+    --red-bg: #fde8e8;
+    --lavender: #9b7fd4;
+    --lavender-bg: #f0ebff;
+    --blue: #4a90d9;
+    --blue-bg: #e8f2fd;
+    --orange: #e07b3c;
+    --orange-bg: #fef0e6;
+    --green: #5daa6a;
+    --green-bg: #e8f5e3;
+    --chart-label: #4a5568;
+    --chart-grid: #e2e8e6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 32px 24px;
+    min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); }
+  .kpi-rank {
+    display: inline-block;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    font-size: 11px; font-weight: 700;
+    line-height: 24px;
+    margin-bottom: 6px;
+  }
+  .kpi-rank.gold { background: #fbbf24; color: #1a1000; }
+  .kpi-rank.silver { background: #94a3b8; color: #0f172a; }
+  .kpi-rank.bronze { background: #d97742; color: #1a0800; }
+  .kpi-rank.n4 { background: #64748b; color: #ffffff; }
+  .kpi-rank.n5 { background: #475569; color: #ffffff; }
+  .kpi-name { font-size: 17px; font-weight: 600; margin-bottom: 2px; }
+  .kpi-total { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
+  .kpi-share { font-size: 11px; color: var(--muted); }
+
+  .chart-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .chart-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .chart-title { font-size: 15px; font-weight: 600; }
+  .chart-sub { font-size: 12px; color: var(--muted); }
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap.stack { height: 380px; }
+  .chart-wrap.hbar { height: 340px; }
+  .chart-wrap.radar { height: 380px; }
+
+  .legend-row {
+    display: flex; flex-wrap: wrap; gap: 18px;
+    justify-content: center; margin-bottom: 12px;
+    font-size: 12px; color: var(--muted);
+  }
+  .legend-dot {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 2px; margin-right: 4px; vertical-align: middle;
+  }
+
+  .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+  .insight-card {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .insight-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .insight-value { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+  .insight-desc { font-size: 12px; color: var(--muted); }
+
+  .rank-table { width: 100%; border-collapse: collapse; }
+  .rank-table th {
+    text-align: left; font-size: 11px; font-weight: 500; color: var(--muted);
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+  }
+  .rank-table td {
+    padding: 10px 12px; font-size: 13px;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .rank-table .rank-col { width: 40px; text-align: center; }
+  .rank-table .num-col { text-align: right; font-variant-numeric: tabular-nums; }
+  .rank-table .bar-cell { width: 180px; }
+  .bar-track {
+    height: 6px; border-radius: 3px; background: #e8ece6;
+    overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+  .bar-fill.p1 { background: var(--pink); }
+  .bar-fill.p2 { background: var(--red); }
+  .bar-fill.p3 { background: var(--lavender); }
+  .bar-fill.p4 { background: var(--blue); }
+  .bar-fill.p5 { background: var(--orange); }
+  .highlight { color: var(--pink); font-weight: 600; }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 10px; font-weight: 600;
+  }
+  .badge.t0 { background: var(--pink-bg); color: var(--pink); }
+  .badge.t1 { background: var(--red-bg); color: var(--red); }
+  .badge.t2 { background: var(--lavender-bg); color: var(--lavender); }
+  .badge.t2b { background: var(--blue-bg); color: var(--blue); }
+  .badge.t3 { background: var(--orange-bg); color: var(--orange); }
+
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .insight-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>恋与深空 × 支付宝 春季联动活动兑换数据分析</h1>
+<p class="subtitle">基于三档奖品已兑换量 · 数据截止 2026-05-22</p>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-rank gold">1</div>
+    <div class="kpi-name" style="color:var(--pink)">祁煜</div>
+    <div class="kpi-total">276,942</div>
+    <div class="kpi-share">兑换量占比 27.8%</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-rank silver">2</div>
+    <div class="kpi-name" style="color:var(--red)">秦彻</div>
+    <div class="kpi-total">211,754</div>
+    <div class="kpi-share">兑换量占比 21.3%</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-rank bronze">3</div>
+    <div class="kpi-name" style="color:var(--lavender)">沈星回</div>
+    <div class="kpi-total">191,685</div>
+    <div class="kpi-share">兑换量占比 19.3%</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-rank n4">4</div>
+    <div class="kpi-name" style="color:var(--blue)">黎深</div>
+    <div class="kpi-total">165,642</div>
+    <div class="kpi-share">兑换量占比 16.6%</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-rank n5">5</div>
+    <div class="kpi-name" style="color:var(--orange)">夏以昼</div>
+    <div class="kpi-total">149,463</div>
+    <div class="kpi-share">兑换量占比 15.0%</div>
+  </div>
+</div>
+
+<div class="insight-grid">
+  <div class="insight-card">
+    <div class="insight-label">兑换差距</div>
+    <div class="insight-value" style="color:var(--pink)">1.85x</div>
+    <div class="insight-desc">祁煜（NO.1）兑换量是夏以昼（NO.5）的 1.85 倍</div>
+  </div>
+  <div class="insight-card">
+    <div class="insight-label">断层领先</div>
+    <div class="insight-value" style="color:var(--red)">+65,188</div>
+    <div class="insight-desc">祁煜超出第二名秦彻 6.5 万，领先幅度 30.8%</div>
+  </div>
+  <div class="insight-card">
+    <div class="insight-label">中段胶着</div>
+    <div class="insight-value" style="color:var(--lavender)">26,043</div>
+    <div class="insight-desc">沈星回与黎深差距仅 2.6 万，三四名竞争激烈</div>
+  </div>
+</div>
+
+<div class="chart-section">
+  <div class="chart-header">
+    <div>
+      <div class="chart-title">三档奖品兑换明细 · 堆叠柱状图</div>
+      <div class="chart-sub">展示每位男主在各档奖品的具体兑换量</div>
+    </div>
+  </div>
+  <div class="legend-row">
+    <span><span class="legend-dot" style="background:#a78bfa"></span>5200 积分卡</span>
+    <span><span class="legend-dot" style="background:#f472b6"></span>1314 积分动态皮肤</span>
+    <span><span class="legend-dot" style="background:#4ade80"></span>520 积分静态皮肤</span>
+  </div>
+  <div class="chart-wrap stack">
+    <canvas id="chartStack" role="img" aria-label="堆叠柱状图：各男主三档奖品兑换量"></canvas>
+  </div>
+</div>
+
+<div class="chart-section">
+  <div class="chart-header">
+    <div>
+      <div class="chart-title">总兑换量排行 · 横向条形图</div>
+      <div class="chart-sub">按总兑换量降序排列，柱状条旁标注具体数值</div>
+    </div>
+  </div>
+  <div class="chart-wrap hbar">
+    <canvas id="chartHBar" role="img" aria-label="横向条形图：男主人气总排行"></canvas>
+  </div>
+</div>
+
+<div class="chart-section">
+  <div class="chart-header">
+    <div>
+      <div class="chart-title">详细数据明细表</div>
+      <div class="chart-sub">三档奖品兑换量完整数据</div>
+    </div>
+  </div>
+  <table class="rank-table">
+    <thead>
+      <tr>
+        <th class="rank-col">排名</th>
+        <th>角色</th>
+        <th>梯队</th>
+        <th class="num-col">5200积分卡</th>
+        <th class="num-col">1314动态皮肤</th>
+        <th class="num-col">520静态皮肤</th>
+        <th class="num-col">总兑换量</th>
+        <th class="bar-cell">兑换量占比</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="rank-col"><span class="kpi-rank gold" style="font-size:9px;width:20px;height:20px;line-height:20px">1</span></td>
+        <td><span style="color:var(--pink);font-weight:600">祁煜</span></td>
+        <td><span class="badge t0">T0</span></td>
+        <td class="num-col highlight">50,631</td>
+        <td class="num-col highlight">108,892</td>
+        <td class="num-col highlight">117,419</td>
+        <td class="num-col" style="font-weight:700;color:var(--pink)">276,942</td>
+        <td class="bar-cell"><div class="bar-track"><div class="bar-fill p1" style="width:100%"></div></div><span style="font-size:10px;color:var(--muted);margin-top:2px;display:block">27.8%</span></td>
+      </tr>
+      <tr>
+        <td class="rank-col"><span class="kpi-rank silver" style="font-size:9px;width:20px;height:20px;line-height:20px">2</span></td>
+        <td><span style="color:var(--red);font-weight:600">秦彻</span></td>
+        <td><span class="badge t1">T1</span></td>
+        <td class="num-col">40,282</td>
+        <td class="num-col">80,872</td>
+        <td class="num-col">90,600</td>
+        <td class="num-col" style="font-weight:700;color:var(--red)">211,754</td>
+        <td class="bar-cell"><div class="bar-track"><div class="bar-fill p2" style="width:76.5%"></div></div><span style="font-size:10px;color:var(--muted);margin-top:2px;display:block">21.3%</span></td>
+      </tr>
+      <tr>
+        <td class="rank-col"><span class="kpi-rank bronze" style="font-size:9px;width:20px;height:20px;line-height:20px">3</span></td>
+        <td><span style="color:var(--lavender);font-weight:600">沈星回</span></td>
+        <td><span class="badge t2">T2</span></td>
+        <td class="num-col">35,830</td>
+        <td class="num-col">71,703</td>
+        <td class="num-col">84,152</td>
+        <td class="num-col" style="font-weight:700;color:var(--lavender)">191,685</td>
+        <td class="bar-cell"><div class="bar-track"><div class="bar-fill p3" style="width:69.2%"></div></div><span style="font-size:10px;color:var(--muted);margin-top:2px;display:block">19.3%</span></td>
+      </tr>
+      <tr>
+        <td class="rank-col"><span class="kpi-rank n4" style="font-size:9px;width:20px;height:20px;line-height:20px">4</span></td>
+        <td><span style="color:var(--blue);font-weight:600">黎深</span></td>
+        <td><span class="badge t2b">T2</span></td>
+        <td class="num-col">31,252</td>
+        <td class="num-col">54,255</td>
+        <td class="num-col">80,135</td>
+        <td class="num-col" style="font-weight:700;color:var(--blue)">165,642</td>
+        <td class="bar-cell"><div class="bar-track"><div class="bar-fill p4" style="width:59.8%"></div></div><span style="font-size:10px;color:var(--muted);margin-top:2px;display:block">16.6%</span></td>
+      </tr>
+      <tr>
+        <td class="rank-col"><span class="kpi-rank n5" style="font-size:9px;width:20px;height:20px;line-height:20px">5</span></td>
+        <td><span style="color:var(--orange);font-weight:600">夏以昼</span></td>
+        <td><span class="badge t3">T3</span></td>
+        <td class="num-col">34,693</td>
+        <td class="num-col">47,452</td>
+        <td class="num-col">67,318</td>
+        <td class="num-col" style="font-weight:700;color:var(--orange)">149,463</td>
+        <td class="bar-cell"><div class="bar-track"><div class="bar-fill p5" style="width:54.0%"></div></div><span style="font-size:10px;color:var(--muted);margin-top:2px;display:block">15.0%</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</div>
+
+<script>
+Chart.register(ChartDataLabels);
+
+const chars = ['祁煜', '秦彻', '沈星回', '黎深', '夏以昼'];
+const tier5200 = [50631, 40282, 35830, 31252, 34693];
+const tier1314 = [108892, 80872, 71703, 54255, 47452];
+const tier520  = [117419, 90600, 84152, 80135, 67318];
+const totals = chars.map((_,i) => tier5200[i] + tier1314[i] + tier520[i]);
+const maxTotal = Math.max(...totals);
+
+const colors = ['#f472b6', '#ef4444', '#c4b5fd', '#60a5fa', '#fb923c'];
+const colorsDark = ['#e11d48', '#dc2626', '#a78bfa', '#2563eb', '#ea580c'];
+
+const chartFont = { family: '-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif' };
+const labelColor = '#4a5568';
+const gridColor = '#e2e8e6';
+
+// ── Stacked bar ──
+new Chart(document.getElementById('chartStack'), {
+  type: 'bar',
+  data: {
+    labels: chars,
+    datasets: [
+      { label: '5200积分卡', data: tier5200, backgroundColor: '#8b5cf6', borderRadius: 4 },
+      { label: '1314动态皮肤', data: tier1314, backgroundColor: '#ec4899', borderRadius: 4 },
+      { label: '520静态皮肤', data: tier520, backgroundColor: '#10b981', borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      datalabels: {
+        anchor: 'center', clamp: true,
+        color: '#fff', font: { size: 11, weight: 'bold', ...chartFont },
+        formatter: function(v) { return (v / 10000).toFixed(1) + '万'; }
+      }
+    },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { color: labelColor, font: { size: 12, ...chartFont } } },
+      y: { stacked: true, grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 10 }, callback: v => (v/10000).toFixed(0) + '万' } }
+    }
+  }
+});
+
+// ── Horizontal bar (total ranking) ──
+new Chart(document.getElementById('chartHBar'), {
+  type: 'bar',
+  data: {
+    labels: chars,
+    datasets: [{
+      data: totals,
+      backgroundColor: ['#f472b6', '#ef4444', '#c4b5fd', '#60a5fa', '#fb923c'],
+      borderRadius: 6,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      datalabels: {
+        anchor: 'end', align: 'end',
+        color: labelColor, font: { size: 13, weight: '600', ...chartFont },
+        formatter: function(v) { return (v / 10000).toFixed(2) + '万'; },
+        offset: 4
+      }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 10 }, callback: v => (v/10000).toFixed(0)+'万' }, max: maxTotal * 1.18 },
+      y: { grid: { display: false }, ticks: { color: labelColor, font: { size: 13, weight: '600', ...chartFont } } }
+    }
+  },
+  plugins: [{
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      const labels = ['T0 断层顶流','T1 稳居第二','T2 中坚','T2 中坚','T3 追赶'];
+      const tagColors = [colors[0],colors[1],colors[2],colors[3],colors[4]];
+      chart.data.datasets[0].data.forEach((v, i) => {
+        const meta = chart.getDatasetMeta(0);
+        const bar = meta.data[i];
+        // 画在数值标签下方，bar.y + 20 刚好排在数值和梯队标签之间
+        ctx.font = '10px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = tagColors[i];
+        ctx.fillText(labels[i], bar.x + 4, bar.y + 22);
+      });
+    }
+  }]
+});
+
+// ── Animate bar fills on table ──
+document.querySelectorAll('.bar-fill').forEach(el => { el.style.width = '0%'; });
+setTimeout(() => {
+  document.querySelectorAll('.bar-fill').forEach(el => {
+    el.style.width = el.style.width === '0%' ? el.getAttribute('style').match(/width:(\d+\.?\d*)%/)?.[1]+'%' : el.style.width;
+  });
+  document.querySelector('.bar-fill.p1').style.width = '100%';
+  document.querySelector('.bar-fill.p2').style.width = '76.5%';
+  document.querySelector('.bar-fill.p3').style.width = '69.2%';
+  document.querySelector('.bar-fill.p4').style.width = '59.8%';
+  document.querySelector('.bar-fill.p5').style.width = '54.0%';
+}, 100);
+</script>
+</body>
+</html>
